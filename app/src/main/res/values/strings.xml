@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Weather</string>
+    <string name="city">City</string>
+    <string name="search">Search</string>
+    <string name="city_name">Prague</string>
+    <string name="city_description">Desription</string>
+    <string name="settings">Settings</string>
+    <string name="aboutDev">About developer</string>
+</resources>
