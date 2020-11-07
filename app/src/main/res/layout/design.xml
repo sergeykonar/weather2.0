@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:background="@color/white"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/layout"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+
+        android:id="@+id/linearLayout"
+        android:layout_width="358dp"
+        android:layout_height="202dp"
+        android:orientation="vertical"
+        android:layout_marginTop="80dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="MissingConstraints">
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="match_parent"
+            android:layout_height="99dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/city_name"
+            android:textColor="@color/colorText"
+            android:textSize="50sp" />
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="101dp"
+            android:gravity="center"
+            android:text="+27"
+            android:textColor="@color/colorText"
+            android:textSize="72sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="356dp"
+        android:layout_height="148dp"
+        android:layout_marginTop="30dp"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout"
+        tools:ignore="MissingConstraints">
+
+        <TextView
+            android:id="@+id/description"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:text="@string/city_description"
+            android:textColor="@color/colorText"
+            android:textSize="24sp" />
+
+        <ImageView
+            android:id="@+id/imgWeather"
+            android:layout_width="356dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            card_view:srcCompat="@drawable/icons8_clouds_50" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout2"
+        android:layout_width="368dp"
+        android:layout_height="153dp"
+        android:layout_marginBottom="16dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:ignore="MissingConstraints">
+
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimary"
+
+            app:endIconMode="custom"
+            app:endIconTint="@color/colorPrimary"
+
+
+            app:startIconDrawable="@drawable/ic_location_city_black_24dp"
+
+            tools:ignore="MissingConstraints">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/city"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:background="@color/colorAccent"
+                android:hint="@string/city"
+                android:textColor="@color/white"
+
+                />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/button2"
+            style="?attr/materialButtonOutlinedStyle"
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+            android:text="@string/search"
+
+            android:textColor="@color/white"
+            android:textSize="36sp"
+            app:backgroundTint="@color/colorAccent"
+            app:strokeWidth="20dp" />
+    </LinearLayout>
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="22dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -32,6 +32,7 @@ import java.util.Calendar;
 
 import java.lang.Math;
 
+import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.Gson;
@@ -67,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView description;
     private LinearLayout view;
     private int weatherID;
+    NavigationView nav;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +87,16 @@ public class MainActivity extends AppCompatActivity {
         init();
         weather();
         Toolbar toolbar = initToolbar();
+
+        nav = (NavigationView) findViewById(R.id.nav_view);
+        nav.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                int id = item.getItemId();
+                item.setChecked(true);
+                return true;
+            }
+        });
 
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -193,6 +205,8 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+
 
     @TargetApi(Build.VERSION_CODES.N)
     private String getLines(BufferedReader in) {
