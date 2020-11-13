@@ -1,6 +1,7 @@
 package com.example.weather2;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -9,6 +10,7 @@ import androidx.core.content.ContextCompat;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
@@ -16,6 +18,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -69,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout view;
     private int weatherID;
     NavigationView nav;
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 
         city = cityPrimary.getText().toString();
         init();
-        weather();
+//        weather();
         Toolbar toolbar = initToolbar();
 
         nav = (NavigationView) findViewById(R.id.nav_view);
@@ -162,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
 
                 public void run() {
                     HttpsURLConnection urlConnection = null;
+
                     try {
                         urlConnection = (HttpsURLConnection) uri.openConnection();
                         urlConnection.setRequestMethod("GET");
@@ -183,13 +189,13 @@ public class MainActivity extends AppCompatActivity {
                         });
                     } catch (Exception e) {
                         Log.e("TAG", "Fail connection", e);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                errorDialog();
+                            }
+                        });
 
-                        Snackbar snackbar = Snackbar.make(view, "Wrong city name!", Snackbar.LENGTH_LONG);
-                        snackbar.setBackgroundTint(ContextCompat.getColor(getApplicationContext(), R.color.colorPrimary));
-                        snackbar.setActionTextColor(ContextCompat.getColor(getApplicationContext(), R.color.white));
-                        snackbar.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.white));
-                        snackbar.setAction("UNDO", new MyUndoListener());
-                        snackbar.show();
+
 
                         e.printStackTrace();
                     } finally {
@@ -201,6 +207,11 @@ public class MainActivity extends AppCompatActivity {
             }).start();
         } catch (MalformedURLException e) {
             Log.e("TAG", "Fail URI", e);
+            runOnUiThread(new Runnable() {
+                              public void run() {
+                                  errorDialog();
+                              }
+                          });
 
             e.printStackTrace();
         }
@@ -212,7 +223,21 @@ public class MainActivity extends AppCompatActivity {
     private String getLines(BufferedReader in) {
         return in.lines().collect(Collectors.joining("\n"));
     }
-    
+
+    private void errorDialog(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Error")
+                .setMessage("The error occurred while connecting to the server.")
+                .setPositiveButton("OK",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
 
     @SuppressLint("DefaultLocale")
