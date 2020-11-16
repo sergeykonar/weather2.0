@@ -1,6 +1,7 @@
 package com.example.weather2;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -9,6 +10,8 @@ import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -58,20 +61,20 @@ import javax.net.ssl.HttpsURLConnection;
 public class MainActivity extends AppCompatActivity {
 
     private Button search;
-    private String result;
-    private String city="Prague";
-    private TextView temp;
+    public static String result;
+    public static String city="Prague";
+    public static TextView temp;
     private TextInputEditText cityPrimary;
-    private TextView cityLabel;
-    private static final String WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?q=";
-    private static final String WEATHER_API_KEY = "&units=metric&appid=e89813f0aac2ffe098b97f711aae632a";
+    public static TextView cityLabel;
+    public static final String WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?q=";
+    public static final String WEATHER_API_KEY = "&units=metric&appid=e89813f0aac2ffe098b97f711aae632a";
     private SharedPreferences sharedPrefs;
     public static final String myPrefs = "myprefs";
     public static final String nameKey = "nameKey";
-    private ImageView imgWeather;
-    private TextView description;
+    public ImageView imgWeather;
+    public static TextView description;
     private LinearLayout view;
-    private int weatherID;
+    public static int weatherID;
     NavigationView nav;
     private Handler mHandler;
 
@@ -79,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
 
         view = (LinearLayout) findViewById(R.id.layout2);
         imgWeather = (ImageView) findViewById(R.id.imgWeather);
@@ -90,6 +95,9 @@ public class MainActivity extends AppCompatActivity {
 
         city = cityPrimary.getText().toString();
         init();
+
+        initNotificationChannel();
+
 //        weather();
         Toolbar toolbar = initToolbar();
 
@@ -114,7 +122,10 @@ public class MainActivity extends AppCompatActivity {
                 editor.putString(nameKey, city);
                 editor.apply();
 
-                weather();
+
+                GetWeatherData weatherData = new GetWeatherData();
+                weatherData.getData(city, new Handler());
+
                 Calendar rightNow = Calendar.getInstance();
                 int currentHourIn24Format = rightNow.get(Calendar.HOUR_OF_DAY);
                 Log.d("TAG", String.valueOf(currentHourIn24Format));
@@ -125,6 +136,16 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
+
+    private void initNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            int importance = NotificationManager.IMPORTANCE_LOW;
+            NotificationChannel mChannel = new NotificationChannel("2", "name", importance);
+            notificationManager.createNotificationChannel(mChannel);
+        }
+    }
+
 
     private void init() {
         sharedPrefs = getSharedPreferences(myPrefs, Context.MODE_PRIVATE);
@@ -159,59 +180,21 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void weather() {
         try {
-            final URL uri = new URL(WEATHER_URL+city+WEATHER_API_KEY);
-            final Handler handler = new Handler();
-            new Thread(new Runnable() {
-
-                public void run() {
-                    HttpsURLConnection urlConnection = null;
-
-                    try {
-                        urlConnection = (HttpsURLConnection) uri.openConnection();
-                        urlConnection.setRequestMethod("GET");
-                        urlConnection.setReadTimeout(10000);
-                        BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-                        result = getLines(in);
-
-                        Gson gson = new Gson();
-                        final WeatherRequest weatherRequest = gson.fromJson(result, WeatherRequest.class);
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    displayWeather(weatherRequest);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-                    } catch (Exception e) {
-                        Log.e("TAG", "Fail connection", e);
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                errorDialog();
-                            }
-                        });
+            GetWeatherData weatherData = new GetWeatherData();
+            weatherData.getData(city, new Handler());
 
 
 
-                        e.printStackTrace();
-                    } finally {
-                        if (null != urlConnection) {
-                            urlConnection.disconnect();
-                        }
-                    }
-                }
-            }).start();
-        } catch (MalformedURLException e) {
+        } catch (Exception e) {
             Log.e("TAG", "Fail URI", e);
             runOnUiThread(new Runnable() {
-                              public void run() {
-                                  errorDialog();
-                              }
-                          });
+                public void run() {
+                    errorDialog();
+                }
+            });
 
             e.printStackTrace();
         }
@@ -265,28 +248,29 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void setImg(int descriptionT){
-        if(descriptionT >= 803 && descriptionT <= 804){
-            imgWeather.setImageResource(R.drawable.broken_clouds);
-        }
-        else if(descriptionT == 800){
-            imgWeather.setImageResource(R.drawable.sun);
-        }else if(descriptionT == 801){
-            imgWeather.setImageResource(R.drawable.few_clouds);
-        }
-        else if(descriptionT ==802){
-            imgWeather.setImageResource(R.drawable.scattered_clouds);
-        }
 
-//      Clouds
-//        Rains
-        else if(descriptionT >= 500 && descriptionT <=504){
-            imgWeather.setImageResource(R.drawable.rain);
-        }
-
-        else if(descriptionT >= 520 && descriptionT <=531){
-            imgWeather.setImageResource(R.drawable.shower_rain);
-        }
+    public static void setImg(int descriptionT){
+//        if(descriptionT >= 803 && descriptionT <= 804){
+//            imgWeather.setImageResource(R.drawable.broken_clouds);
+//        }
+//        else if(descriptionT == 800){
+//            imgWeather.setImageResource(R.drawable.sun);
+//        }else if(descriptionT == 801){
+//            imgWeather.setImageResource(R.drawable.few_clouds);
+//        }
+//        else if(descriptionT ==802){
+//            imgWeather.setImageResource(R.drawable.scattered_clouds);
+//        }
+//
+////      Clouds
+////        Rains
+//        else if(descriptionT >= 500 && descriptionT <=504){
+//            imgWeather.setImageResource(R.drawable.rain);
+//        }
+//
+//        else if(descriptionT >= 520 && descriptionT <=531){
+//            imgWeather.setImageResource(R.drawable.shower_rain);
+//        }
 
 
 
