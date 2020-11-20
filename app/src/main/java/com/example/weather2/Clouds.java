@@ -1,6 +1,12 @@
 package com.example.weather2;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
+// "clouds":{"all":75}
 public class Clouds {
+    @SerializedName("all")
+    @Expose
     private int all;
 
     public int getAll() {

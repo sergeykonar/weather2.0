@@ -1,7 +1,6 @@
 package com.example.weather2;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -10,8 +9,6 @@ import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -43,6 +40,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.Gson;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -57,34 +55,40 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private Button search;
-    public static String result;
-    public static String city="Prague";
-    public static TextView temp;
+    private String result;
+    private String city="Prague";
+    private TextView temp;
     private TextInputEditText cityPrimary;
-    public static TextView cityLabel;
-    public static final String WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?q=";
-    public static final String WEATHER_API_KEY = "&units=metric&appid=e89813f0aac2ffe098b97f711aae632a";
+    private TextView cityLabel;
+    private static final String WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?q=";
+    private static final String WEATHER_API_KEY = "&units=metric&appid=e89813f0aac2ffe098b97f711aae632a";
     private SharedPreferences sharedPrefs;
     public static final String myPrefs = "myprefs";
     public static final String nameKey = "nameKey";
-    public ImageView imgWeather;
-    public static TextView description;
+    private ImageView imgWeather;
+    private TextView description;
     private LinearLayout view;
-    public static int weatherID;
+    private int weatherID;
     NavigationView nav;
     private Handler mHandler;
+    private OpenWeather openWeather;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
+        initRetorfit();
         view = (LinearLayout) findViewById(R.id.layout2);
         imgWeather = (ImageView) findViewById(R.id.imgWeather);
         search = (Button) findViewById(R.id.button2);
@@ -95,9 +99,6 @@ public class MainActivity extends AppCompatActivity {
 
         city = cityPrimary.getText().toString();
         init();
-
-        initNotificationChannel();
-
 //        weather();
         Toolbar toolbar = initToolbar();
 
@@ -113,22 +114,7 @@ public class MainActivity extends AppCompatActivity {
 
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                city = cityPrimary.getText().toString();
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                assert imm != null;
-                imm.hideSoftInputFromWindow(v.getApplicationWindowToken(), 0);
-
-                SharedPreferences.Editor editor = sharedPrefs.edit();
-                editor.putString(nameKey, city);
-                editor.apply();
-
-
-                GetWeatherData weatherData = new GetWeatherData();
-                weatherData.getData(city, new Handler());
-
-                Calendar rightNow = Calendar.getInstance();
-                int currentHourIn24Format = rightNow.get(Calendar.HOUR_OF_DAY);
-                Log.d("TAG", String.valueOf(currentHourIn24Format));
+                requestRetrofit(cityPrimary.getText().toString(), "e89813f0aac2ffe098b97f711aae632a");
             }
         });
 
@@ -137,13 +123,29 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void initNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            int importance = NotificationManager.IMPORTANCE_LOW;
-            NotificationChannel mChannel = new NotificationChannel("2", "name", importance);
-            notificationManager.createNotificationChannel(mChannel);
-        }
+    private void initRetorfit() {
+        Retrofit retrofit;
+        retrofit = new Retrofit.Builder()
+                .baseUrl("http://api.openweathermap.org/")
+                .addConverterFactory(GsonConverterFactory.create()).build();
+        openWeather = retrofit.create(OpenWeather.class);
+    }
+    private void requestRetrofit(String city, String keyApi) {
+        openWeather.loadWeather(city, "e89813f0aac2ffe098b97f711aae632a")
+                .enqueue(new Callback<WeatherRequest>() {
+                    @Override
+                    public void onResponse(Call<WeatherRequest> call, Response<WeatherRequest> response) {
+                        if (response.body() != null) {
+                            float result = response.body().getMain().getTemp() ;
+                            temp.setText(Float.toString(result));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<WeatherRequest> call, Throwable t) {
+                        temp.setText("Error");
+                    }
+                });
     }
 
 
@@ -180,15 +182,53 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
     private void weather() {
         try {
-            GetWeatherData weatherData = new GetWeatherData();
-            weatherData.getData(city, new Handler());
+            final URL uri = new URL(WEATHER_URL+city+WEATHER_API_KEY);
+            final Handler handler = new Handler();
+            new Thread(new Runnable() {
+
+                public void run() {
+                    HttpsURLConnection urlConnection = null;
+
+                    try {
+                        urlConnection = (HttpsURLConnection) uri.openConnection();
+                        urlConnection.setRequestMethod("GET");
+                        urlConnection.setReadTimeout(10000);
+                        BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                        result = getLines(in);
+
+                        Gson gson = new Gson();
+                        final WeatherRequest weatherRequest = gson.fromJson(result, WeatherRequest.class);
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    displayWeather(weatherRequest);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    } catch (Exception e) {
+                        Log.e("TAG", "Fail connection", e);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                errorDialog();
+                            }
+                        });
 
 
 
-        } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (null != urlConnection) {
+                            urlConnection.disconnect();
+                        }
+                    }
+                }
+            }).start();
+        } catch (MalformedURLException e) {
             Log.e("TAG", "Fail URI", e);
             runOnUiThread(new Runnable() {
                 public void run() {
@@ -248,29 +288,32 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
-    public static void setImg(int descriptionT){
-//        if(descriptionT >= 803 && descriptionT <= 804){
+    public void setImg(int descriptionT){
+        if(descriptionT >= 803 && descriptionT <= 804){
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
 //            imgWeather.setImageResource(R.drawable.broken_clouds);
-//        }
-//        else if(descriptionT == 800){
+        }
+        else if(descriptionT == 800){
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
 //            imgWeather.setImageResource(R.drawable.sun);
-//        }else if(descriptionT == 801){
+        }else if(descriptionT == 801){
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
 //            imgWeather.setImageResource(R.drawable.few_clouds);
-//        }
-//        else if(descriptionT ==802){
+        }
+        else if(descriptionT ==802){
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
 //            imgWeather.setImageResource(R.drawable.scattered_clouds);
-//        }
-//
-////      Clouds
-////        Rains
-//        else if(descriptionT >= 500 && descriptionT <=504){
-//            imgWeather.setImageResource(R.drawable.rain);
-//        }
-//
-//        else if(descriptionT >= 520 && descriptionT <=531){
-//            imgWeather.setImageResource(R.drawable.shower_rain);
-//        }
+        }
+
+//      Clouds
+//        Rains
+        else if(descriptionT >= 500 && descriptionT <=504){
+            imgWeather.setImageResource(R.drawable.rain);
+        }
+
+        else if(descriptionT >= 520 && descriptionT <=531){
+            imgWeather.setImageResource(R.drawable.shower_rain);
+        }
 
 
 
