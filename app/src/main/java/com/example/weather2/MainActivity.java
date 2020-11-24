@@ -144,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(Call<WeatherRequest> call, Throwable t) {
                         temp.setText("Error");
+                        weather();
                     }
                 });
     }
