@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    tools:showIn="navigation_view">
+
+
+    <group android:checkableBehavior="single">
+        <item
+            android:checked="true"
+            android:id="@+id/nav_home"
+
+            android:title="@string/aboutDev" />
+        <item
+
+            android:id="@+id/nav_gallery"
+
+            android:title="@string/popCity" />
+        <item
+
+            android:id="@+id/nav_slideshow"
+
+            android:title="@string/contactUs" />
+
+    </group>
+
+
+</menu>

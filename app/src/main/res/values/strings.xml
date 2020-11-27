@@ -6,4 +6,8 @@
     <string name="city_description">Desription</string>
     <string name="settings">Settings</string>
     <string name="aboutDev">About developer</string>
+    <string name="dev">Имя разработчика</string>
+    <string name="popCity">Popular cities</string>
+    <string name="contactUs">Обратная связь</string>
+
 </resources>

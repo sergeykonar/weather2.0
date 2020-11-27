@@ -1,6 +1,7 @@
 package com.example.weather2;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -8,14 +9,20 @@ import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,6 +32,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 import java.util.Calendar;
@@ -32,9 +40,11 @@ import java.util.Calendar;
 
 import java.lang.Math;
 
+import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.Gson;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -48,6 +58,12 @@ import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -67,12 +83,50 @@ public class MainActivity extends AppCompatActivity {
     private TextView description;
     private LinearLayout view;
     private int weatherID;
+    NavigationView nav;
+    private Handler mHandler;
+    private OpenWeather openWeather;
+
+    final String BROADCAST_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
+
+    IntentFilter intentFilter = new IntentFilter(BROADCAST_ACTION);
+
+    BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String action = intent.getAction();
+
+            switch (action) {
+                case BROADCAST_ACTION:
+
+                    final ConnectivityManager connMgr = (ConnectivityManager) context
+                            .getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                    final android.net.NetworkInfo wifi = connMgr
+                            .getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+                    final android.net.NetworkInfo mobile = connMgr
+                            .getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+
+
+                    if (wifi.isConnected() ) {
+
+                        Log.d("Network Available ", "+");
+                    }else {
+                        Toast.makeText(getBaseContext(), "Switch on Internet", Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        initRetorfit();
         view = (LinearLayout) findViewById(R.id.layout2);
         imgWeather = (ImageView) findViewById(R.id.imgWeather);
         search = (Button) findViewById(R.id.button2);
@@ -83,31 +137,63 @@ public class MainActivity extends AppCompatActivity {
 
         city = cityPrimary.getText().toString();
         init();
-        weather();
+//        weather();
         Toolbar toolbar = initToolbar();
+
+        nav = (NavigationView) findViewById(R.id.nav_view);
+        nav.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                int id = item.getItemId();
+                item.setChecked(true);
+                return true;
+            }
+        });
 
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                city = cityPrimary.getText().toString();
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                assert imm != null;
-                imm.hideSoftInputFromWindow(v.getApplicationWindowToken(), 0);
-
-                SharedPreferences.Editor editor = sharedPrefs.edit();
-                editor.putString(nameKey, city);
-                editor.apply();
-
-                weather();
-                Calendar rightNow = Calendar.getInstance();
-                int currentHourIn24Format = rightNow.get(Calendar.HOUR_OF_DAY);
-                Log.d("TAG", String.valueOf(currentHourIn24Format));
+                requestRetrofit(cityPrimary.getText().toString(), "e89813f0aac2ffe098b97f711aae632a");
             }
         });
 
 
 
+        registerReceiver(receiver,intentFilter);
 
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(receiver);
+    }
+
+    private void initRetorfit() {
+        Retrofit retrofit;
+        retrofit = new Retrofit.Builder()
+                .baseUrl("http://api.openweathermap.org/")
+                .addConverterFactory(GsonConverterFactory.create()).build();
+        openWeather = retrofit.create(OpenWeather.class);
+    }
+    private void requestRetrofit(String city, String keyApi) {
+        openWeather.loadWeather(city, "e89813f0aac2ffe098b97f711aae632a")
+                .enqueue(new Callback<WeatherRequest>() {
+                    @Override
+                    public void onResponse(Call<WeatherRequest> call, Response<WeatherRequest> response) {
+                        if (response.body() != null) {
+                            float result = response.body().getMain().getTemp() ;
+                            temp.setText(Float.toString(result));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<WeatherRequest> call, Throwable t) {
+                        temp.setText("Error");
+                        weather();
+                    }
+                });
+    }
+
 
     private void init() {
         sharedPrefs = getSharedPreferences(myPrefs, Context.MODE_PRIVATE);
@@ -150,6 +236,7 @@ public class MainActivity extends AppCompatActivity {
 
                 public void run() {
                     HttpsURLConnection urlConnection = null;
+
                     try {
                         urlConnection = (HttpsURLConnection) uri.openConnection();
                         urlConnection.setRequestMethod("GET");
@@ -171,13 +258,13 @@ public class MainActivity extends AppCompatActivity {
                         });
                     } catch (Exception e) {
                         Log.e("TAG", "Fail connection", e);
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                errorDialog();
+                            }
+                        });
 
-                        Snackbar snackbar = Snackbar.make(view, "Wrong city name!", Snackbar.LENGTH_LONG);
-                        snackbar.setBackgroundTint(ContextCompat.getColor(getApplicationContext(), R.color.colorPrimary));
-                        snackbar.setActionTextColor(ContextCompat.getColor(getApplicationContext(), R.color.white));
-                        snackbar.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.white));
-                        snackbar.setAction("UNDO", new MyUndoListener());
-                        snackbar.show();
+
 
                         e.printStackTrace();
                     } finally {
@@ -189,16 +276,37 @@ public class MainActivity extends AppCompatActivity {
             }).start();
         } catch (MalformedURLException e) {
             Log.e("TAG", "Fail URI", e);
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    errorDialog();
+                }
+            });
 
             e.printStackTrace();
         }
     }
 
+
+
     @TargetApi(Build.VERSION_CODES.N)
     private String getLines(BufferedReader in) {
         return in.lines().collect(Collectors.joining("\n"));
     }
-    
+
+    private void errorDialog(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Error")
+                .setMessage("The error occurred while connecting to the server.")
+                .setPositiveButton("OK",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
 
     @SuppressLint("DefaultLocale")
@@ -228,15 +336,19 @@ public class MainActivity extends AppCompatActivity {
 
     public void setImg(int descriptionT){
         if(descriptionT >= 803 && descriptionT <= 804){
-            imgWeather.setImageResource(R.drawable.broken_clouds);
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
+//            imgWeather.setImageResource(R.drawable.broken_clouds);
         }
         else if(descriptionT == 800){
-            imgWeather.setImageResource(R.drawable.sun);
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
+//            imgWeather.setImageResource(R.drawable.sun);
         }else if(descriptionT == 801){
-            imgWeather.setImageResource(R.drawable.few_clouds);
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
+//            imgWeather.setImageResource(R.drawable.few_clouds);
         }
         else if(descriptionT ==802){
-            imgWeather.setImageResource(R.drawable.scattered_clouds);
+            Picasso.get().load("https://c1.staticflickr.com/1/186/31520440226_175445c41a_b.jpg").into(imgWeather);
+//            imgWeather.setImageResource(R.drawable.scattered_clouds);
         }
 
 //      Clouds

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -12,12 +12,16 @@
 
     </style>
 
+
     <style name="myButton" parent="Widget.MaterialComponents.Button.Icon">
         <!-- Customize your theme here. -->
         <item name="android:textColor">@color/colorAccent</item>
         <item name="android:background">@color/colorAccent</item>
 
     </style>
+
+
+
 
 
 </resources>
