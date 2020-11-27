@@ -9,11 +9,14 @@ import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.inputmethodservice.Keyboard;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +32,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 import java.util.Calendar;
@@ -83,6 +87,40 @@ public class MainActivity extends AppCompatActivity {
     private Handler mHandler;
     private OpenWeather openWeather;
 
+    final String BROADCAST_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
+
+    IntentFilter intentFilter = new IntentFilter(BROADCAST_ACTION);
+
+    BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String action = intent.getAction();
+
+            switch (action) {
+                case BROADCAST_ACTION:
+
+                    final ConnectivityManager connMgr = (ConnectivityManager) context
+                            .getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                    final android.net.NetworkInfo wifi = connMgr
+                            .getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+                    final android.net.NetworkInfo mobile = connMgr
+                            .getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+
+
+                    if (wifi.isConnected() ) {
+
+                        Log.d("Network Available ", "+");
+                    }else {
+                        Toast.makeText(getBaseContext(), "Switch on Internet", Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,7 +158,14 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+        registerReceiver(receiver,intentFilter);
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(receiver);
     }
 
     private void initRetorfit() {
